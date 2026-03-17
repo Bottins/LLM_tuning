@@ -162,7 +162,7 @@ If using this pipeline in academic work, please cite:
 
 ```bibtex
 @software{bottini2026sciml_llm,
-  author = {Bottini, Alessandro},
+  author = {Bottino, Alessandro},
   title = {Scientific Machine Learning LLM Fine-Tuning Pipeline},
   year = {2026},
   url = {https://github.com/Bottins/LLM_tuning}
@@ -181,6 +181,6 @@ Open-source for research and educational purposes. Commercial deployment of fine
 
 ---
 
-**Author**: Alessandro Bottini
+**Author**: Alessandro Bottino
 **Last Updated**: March 2026
 **Repository**: Coming soon to GitHub
