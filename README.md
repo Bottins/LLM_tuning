@@ -161,7 +161,7 @@ After training, the following artifacts are saved:
 If using this pipeline in academic work, please cite:
 
 ```bibtex
-@software{bottini2026sciml_llm,
+@software{bottino2026sciml_llm,
   author = {Bottino, Alessandro},
   title = {Scientific Machine Learning LLM Fine-Tuning Pipeline},
   year = {2026},
