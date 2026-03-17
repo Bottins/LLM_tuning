@@ -1,0 +1,63 @@
+#!/bin/bash
+#PBS -N sciml_llm_finetune
+#PBS -o logs/job_output.log
+#PBS -e logs/job_error.log
+#PBS -l select=2:ncpus=32:ngpus=8:mem=256gb
+#PBS -l walltime=08:00:00
+#PBS -q boost_qos_dbg        # usa boost_qos_usr_prod per run lunghi
+#PBS -A <INSERISCI_IL_TUO_ACCOUNT_CINECA>
+
+# ── Ambiente ───────────────────────────────────────────────────────────────────
+module load python/3.11
+module load cuda/12.1
+module load nccl/2.18
+
+cd $PBS_O_WORKDIR
+source venv/bin/activate
+
+mkdir -p logs
+
+# ── Info nodi ──────────────────────────────────────────────────────────────────
+NODES=$(cat $PBS_NODEFILE | sort -u)
+NODE_LIST=($NODES)
+MASTER_NODE=${NODE_LIST[0]}
+MASTER_ADDR=$(host $MASTER_NODE | awk '{print $NF}')
+MASTER_PORT=29500
+N_NODES=2
+GPUS_PER_NODE=8
+
+echo "Master node: $MASTER_NODE ($MASTER_ADDR)"
+echo "All nodes: ${NODE_LIST[@]}"
+echo "Total GPUs: $((N_NODES * GPUS_PER_NODE))"
+
+# ── Aggiorna accelerate_fsdp.yaml con l'IP del master ─────────────────────────
+sed -i "s|main_process_ip: null|main_process_ip: $MASTER_ADDR|" accelerate_fsdp.yaml
+
+# ── Lancia il training su tutti i nodi ────────────────────────────────────────
+# mpirun distribuisce il processo su ogni nodo; accelerate gestisce FSDP internamente
+mpirun -np $N_NODES \
+       -machinefile $PBS_NODEFILE \
+       --map-by node \
+       bash -c "
+         RANK=\$OMPI_COMM_WORLD_RANK
+         accelerate launch \
+           --config_file accelerate_fsdp.yaml \
+           --machine_rank \$RANK \
+           --main_process_ip $MASTER_ADDR \
+           --main_process_port $MASTER_PORT \
+           --num_machines $N_NODES \
+           --num_processes $((N_NODES * GPUS_PER_NODE)) \
+           finetune.py \
+             --model_id Qwen/Qwen3-4B \
+             --train_file data/train.jsonl \
+             --val_file data/val.jsonl \
+             --output_dir output/sciml-lora \
+             --batch_size 2 \
+             --grad_accum 8 \
+             --lr 2e-4 \
+             --epochs 3 \
+             --lora_r 16 \
+             --lora_alpha 32
+       "
+
+echo "Job completato."
